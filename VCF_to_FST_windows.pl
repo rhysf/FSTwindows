@@ -26,9 +26,13 @@ if(!defined $opt_f) { $opt_f = ($opt_c . '-' . $opt_d . '-FST-wl-' . $opt_w . '.
 die "-w needs to be numerical ($opt_w)\n" if (($opt_w) !~ /\d+/);
 die "-o needs to be o or f ($opt_o)\n" if (($opt_o ne 'o') && ($opt_o ne 'f'));
 
-# Save Name -> Lineages, and Name->VCF-Location
-my $names_to_lineage = tabfile::save_one_to_two_columns($opt_a, 0, 1);
-my $names_to_location = tabfile::save_two_to_three_columns($opt_b, 0, 1, 2);
+# Save Name -> Lineages
+my $names_to_lineage = tabfile::save_columns_to_column_hash($opt_a, 0, 1);
+
+# save Name->VCF->Location
+my $names_to_location = tabfile::save_columns_to_column_hash($opt_b, 0, 1, 2);
+
+# Subset for lineages of interest
 my ($lineage1_bases, $lineage2_bases, $lineage1_and_2_bases) = &save_name_to_location_for_2_lineages($names_to_lineage, $names_to_location, $opt_c, $opt_d);
 
 # Initial calculations for FST
