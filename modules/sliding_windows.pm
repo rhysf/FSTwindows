@@ -15,6 +15,54 @@ use Data::Dumper;
 
 ### rfarrer@broadinstitute.org
 
+sub make_windows_for_seq_struct {
+	my ($seq_struct, $window_length, $names, $windows_interest) = @_;
+	my @windows_of_interest = split /\s/, $windows_interest;
+	#my @windows_of_interest = qw(anything HOMS HETS INDEL PHASE TOTALDEPTH AVERAGEDEPTH AVERAGEDEPTHEWL NORMALISEDDEPTH NORMALISEDDEPTHEWL NORMALISEDDEPTHGC NORMALISEDDEPTHGCEWL TAB);
+
+	my (%windows, %total_GC);
+
+	warn "make_windows_for_seq_struct: making $window_length windows according to seq hash...\n";
+	foreach my $id(keys %{$$seq_struct{'seq'}}) {
+		my $seq = $$seq_struct{'seq'}{$id};
+		my $length = length($seq);
+
+		#warn "Windows for $id = 1 - $length\n";
+		foreach my $isolatename(keys %{$names}) {
+			#warn "$isolatename\n";
+			my $previous_length = 0;
+
+			# Along the contig
+			for(my $i=$window_length; $i < $length; $i+=$window_length) {
+				# warn "$previous_length - $i\n";	
+				my $seq_window = substr $seq, $previous_length, ($i - $previous_length);
+				my ($EWL, $GC_PC) = &get_effective_window_length_and_gcpc($seq_window);
+				$total_GC{$isolatename}{$GC_PC}{'TOTALLENGTH'} += $window_length;
+				$total_GC{$isolatename}{$GC_PC}{'TOTALLENGTHEWL'} += $EWL;
+				$windows{$isolatename}{$id}{$previous_length}{$i}{'EWL'} = $EWL;
+				$windows{$isolatename}{$id}{$previous_length}{$i}{'GC_PC'} = $GC_PC;
+
+				foreach my $window_type(@windows_of_interest) { $windows{$isolatename}{$id}{$previous_length}{$i}{$window_type} = 0; }
+				$previous_length = $i;
+			}
+
+			# End of contig	
+			if($previous_length < $length) {
+				my $seq_window = substr $seq, $previous_length, $length;
+				my ($EWL, $GC_PC) = &get_effective_window_length_and_gcpc($seq_window);
+				$total_GC{$isolatename}{$GC_PC}{'TOTALLENGTH'} += $window_length;
+				$total_GC{$isolatename}{$GC_PC}{'TOTALLENGTHEWL'} += $EWL;
+				$windows{$isolatename}{$id}{$previous_length}{$length}{'EWL'} = $EWL;
+				$windows{$isolatename}{$id}{$previous_length}{$length}{'GC_PC'} = $GC_PC;
+				
+				foreach my $window_type(@windows_of_interest) { $windows{$isolatename}{$id}{$previous_length}{$length}{$window_type} = 0; }
+			}
+		}
+	}
+	warn scalar(keys(%windows)) . " isolates with empty windows initalised.\n";
+	return(\%windows, \%total_GC);
+}
+
 sub make_windows_for_seq_hash {
 	my ($seq_hash, $window_length, $names, $windows_interest) = @_;
 	my @windows_of_interest = split /\s/, $windows_interest;
